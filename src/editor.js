@@ -133,6 +133,27 @@
     headID.appendChild(cssNode);
   }
 
+  /**
+   * Inserts a <script> tag for a JS resource
+   * @param  {string} path The path to the JS file
+   * @param  {object} context In what context you want to apply this to (document, iframe, etc)
+   * @param  {string} id An id for you to reference later for changing properties of the <script>
+   * @returns {undefined}
+   */
+  function _insertJSScript(path, context, id) {
+    id = id || '';
+    var headID = context.getElementsByTagName("head")[0]
+      , jsNode = context.createElement('script');
+    
+    _applyAttrs(jsNode, {
+      type: 'text/javascript'
+    , id: id
+    , src: path
+    });
+
+    headID.appendChild(jsNode);
+  }
+
   // Simply replaces a class (o), to a new class (n) on an element provided (e)
   function _replaceClass(e, o, n) {
     e.className = e.className.replace(o, n);
@@ -301,6 +322,10 @@
         , theme: { base: '/themes/base/epiceditor.css'
           , preview: '/themes/preview/github.css'
           , editor: '/themes/editor/epic-dark.css'
+          }
+        , resource: { base: []
+          , preview: []
+          , editor: []
           }
         , focusOnLoad: false
         , shortcut: { modifier: 18 // alt keycode
@@ -532,6 +557,36 @@
     
     // Insert Previewer Stylesheet
     _insertCSSLink(self.settings.basePath + self.settings.theme.preview, self.previewerIframeDocument, 'theme');
+    
+    // Insert resources
+    for (var location in self.settings.resource) {
+      if (self.settings.resource.hasOwnProperty(location)) {
+        var resources = self.settings.resource[location]
+          , context;
+        
+        if (location === "base") {
+          context = self.iframe;
+        } else if (location === "editor") {
+          context = self.editorIframeDocument;
+        } else if (location === "preview") {
+          context = self.previewerIframeDocument;
+        }
+      
+        for (i = 0; i < resources.length; i++) {
+          var resource = resources[i]
+            , path = resource.src;
+          
+          if (!resource.isAbsolute) {
+            path = self.settings.basePath + path;
+          }
+          if (resource.type === "js") {
+            _insertJSScript(path, context, resource.id);
+          } else if (resource.type === "css") {
+            _insertCSSLink(path, context, resource.id);
+          }
+        }
+      }
+    }
 
     // Add a relative style to the overall wrapper to keep CSS relative to the editor
     self.iframe.getElementById('epiceditor-wrapper').style.position = 'relative';
